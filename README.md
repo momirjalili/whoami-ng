@@ -55,20 +55,6 @@ kubectl apply -f k8s/
 kubectl port-forward svc/whoami-ng 8080:80
 ```
 
-### kubeadm / bare containerd nodes (no registry)
-
-For a multi-node cluster with no shared registry (e.g. kubeadm on VMs), load
-the image directly into each node's containerd via `ctr`:
-
-```sh
-k8s/load-image.sh whoami-ng:dev
-kubectl apply -k k8s/
-kubectl rollout restart deployment/whoami-ng  # if it's already running
-```
-
-Assumes SSH access to each node (default hosts: `controller worker-1
-worker-2`, override with `NODES="host1 host2" k8s/load-image.sh`) and `sudo
-ctr` on the remote end.
 
 ### Any cluster with a registry
 
