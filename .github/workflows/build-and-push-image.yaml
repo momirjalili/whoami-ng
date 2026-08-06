@@ -2,6 +2,8 @@ name: build and push image
 
 on:
   push:
+    branches:
+      - main
 
 jobs:
   docker:
@@ -25,3 +27,5 @@ jobs:
         with:
           push: true
           tags: momirjalili/whoami:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
