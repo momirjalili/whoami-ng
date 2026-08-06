@@ -33,37 +33,75 @@ Open http://localhost:8080.
 docker build -t whoami-ng:dev .
 ```
 
-## Deploy to a local cluster
+## Bootstrap a cluster (Flux GitOps)
 
-### kind
+The whole stack — Cilium (CNI + Gateway API + LoadBalancer IPAM), the Gateway
+API CRDs, and this app — is reconciled from git by [Flux](https://fluxcd.io). A
+small script creates/prepares the cluster and installs Cilium so the network
+comes up, then runs `flux bootstrap`; after that **git is the source of truth**
+and Flux keeps the cluster in sync.
 
-```sh
-kind load docker-image whoami-ng:dev
-kubectl apply -f k8s/
-kubectl port-forward svc/whoami-ng 8080:80
+Pinned, compatible versions: **Cilium 1.16.5**, **Gateway API v1.1.0**.
+
+Layout:
+
+```
+k8s/
+  clusters/{kind,kubeadm}/   # Flux entrypoints (bootstrap --path targets)
+  infra/controllers/         # Gateway API CRDs, Cilium HelmRepository/HelmRelease
+  infra/configs/cilium/      # LoadBalancer IP pool + L2 announcement policy
+  app/{base,overlays}/       # the whoami-ng app
+  scripts/                   # bootstrap-kind.sh, bootstrap-kubeadm.sh, lib
 ```
 
-Open http://localhost:8080 — refresh or ping/curl repeatedly and watch the
-"Responses by pod" chart fill in as the Service load-balances across the 3
-replicas.
+Per-cluster values (API server host, LB range, L2 interface) are injected via
+Flux `postBuild` substitution from a `cluster-vars` ConfigMap that the bootstrap
+script writes — so the `infra/` manifests are shared across both clusters.
 
-### minikube
+Common prereqs: `kubectl`, `helm`, `flux` CLIs and a GitHub PAT exported as
+`GITHUB_TOKEN` (repo scope).
 
-```sh
-minikube image load whoami-ng:dev
-kubectl apply -f k8s/
-kubectl port-forward svc/whoami-ng 8080:80
-```
-
-
-### Any cluster with a registry
+### kind (local, multi-node, kube-proxy-less)
 
 ```sh
-docker build -t <registry>/whoami-ng:dev .
-docker push <registry>/whoami-ng:dev
-# update k8s/deployment.yaml image: to <registry>/whoami-ng:dev
-kubectl apply -f k8s/
+docker build -t whoami-ng:dev .
+GITHUB_TOKEN=ghp_xxx ./k8s/scripts/bootstrap-kind.sh
 ```
+
+Creates a 3-node kind cluster (no default CNI, no kube-proxy) and reconciles
+`k8s/clusters/kind` → Cilium → LB-IPAM/L2 → `k8s/app/overlays/kind`.
+
+### kubeadm (real cluster)
+
+Initialise the control plane without kube-proxy and without a CNI:
+
+```sh
+kubeadm init --skip-phases=addon/kube-proxy   # plus your usual flags
+```
+
+Set your registry in `k8s/app/overlays/registry/kustomization.yaml`, push the
+image, then (with your kubeconfig pointing at the cluster):
+
+```sh
+export LB_CIDR=192.168.10.240/28 L2_INTERFACE='^(eth|en).+'
+GITHUB_TOKEN=ghp_xxx ./k8s/scripts/bootstrap-kubeadm.sh
+```
+
+Reconciles `k8s/clusters/kubeadm` → Cilium → LB-IPAM/L2 →
+`k8s/app/overlays/registry`.
+
+### Observe
+
+```sh
+flux get kustomizations --watch
+cilium status
+kubectl get gatewayclass
+kubectl -n milestone get gateway,httproute
+```
+
+The `whoami-ng` Gateway gets an external IP from the Cilium pool; hit it and
+watch the "Responses by pod" chart load-balance across the 3 replicas. To prove
+GitOps is live, hand-edit a managed resource and watch Flux revert it.
 
 ## Trying it out
 
