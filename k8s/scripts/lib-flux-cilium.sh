@@ -24,7 +24,7 @@ require() {
 
 install_gateway_api_crds() {
   echo ">> Installing Gateway API CRDs (${GATEWAY_API_VERSION})"
-  kubectl apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
+  kubectl apply --server-side --force-conflicts -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 }
 
 # install_cilium <k8sServiceHost>
