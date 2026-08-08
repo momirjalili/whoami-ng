@@ -27,6 +27,6 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: momirjalili/whoami-ng:latest
+          tags: momirjalili/whoami-ng:latest,momirjalili/whoami-ng:v0.1
           cache-from: type=gha
           cache-to: type=gha,mode=max

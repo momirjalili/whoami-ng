@@ -1,0 +1,82 @@
+---
+apiVersion: kyverno.io/v1
+# The `ClusterPolicy` kind applies to the entire cluster.
+kind: ClusterPolicy
+metadata:
+  name: require-team-label
+# The `spec` defines properties of the policy.
+spec:
+  # The `rules` is one or more rules which must be true.
+  rules:
+  - name: require-team-label
+    # The `match` statement sets the scope of what will be checked. In this case, it is any `Namespace` resource.
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    # The `validate` statement tries to positively check what is defined. If the statement, when compared with the requested resource, is true, it is allowed. If false, it is blocked.
+    validate:
+      # The `failureAction` tells Kyverno if the resource being validated should be allowed but reported (`Audit`) or blocked (`Enforce`).
+      failureAction: Enforce
+      # The `message` is what gets displayed to a user if this rule fails validation.
+      message: "You must have label `team` on all pods"
+      # The `pattern` object defines what pattern will be checked in the resource. In this case, it is looking for `metadata.labels` with a non-empty `team` key.
+      pattern:
+        metadata:
+          labels:
+            team: "?*"
+---
+apiVersion: kyverno.io/v1
+# The `ClusterPolicy` kind applies to the entire cluster.
+kind: ClusterPolicy
+metadata:
+  name: deny-latest-tag
+# The `spec` defines properties of the policy.
+spec:
+  # The `rules` is one or more rules which must be true.
+  rules:
+  - name: require-image-tag
+    # The `match` statement sets the scope of what will be checked. In this case, it is any `Namespace` resource.
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    # The `validate` statement tries to positively check what is defined. If the statement, when compared with the requested resource, is true, it is allowed. If false, it is blocked.
+    validate:
+      # The `failureAction` tells Kyverno if the resource being validated should be allowed but reported (`Audit`) or blocked (`Enforce`).
+      failureAction: Enforce
+      message: "An image tag is required."
+      # The `foreach` statement checks the `pattern` against every entry of each listed container array.
+      # A missing list (e.g. no `initContainers`) is simply skipped rather than erroring.
+      foreach:
+        - list: "request.object.spec.containers"
+          pattern:
+            image: "*:*"
+        - list: "request.object.spec.initContainers"
+          pattern:
+            image: "*:*"
+        - list: "request.object.spec.ephemeralContainers"
+          pattern:
+            image: "*:*"
+  - name: validate-image-tag
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce
+      message: "Using a mutable image tag e.g. 'latest' is not allowed."
+      foreach:
+        - list: "request.object.spec.containers"
+          pattern:
+            image: "!*:latest"
+        - list: "request.object.spec.initContainers"
+          pattern:
+            image: "!*:latest"
+        - list: "request.object.spec.ephemeralContainers"
+          pattern:
+            image: "!*:latest"
+
