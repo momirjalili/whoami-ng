@@ -3,4 +3,4 @@ kind: Kustomization
 # Gateway API "standard" channel CRDs, pinned to the version implemented by
 # Cilium 1.16 (Gateway API v1.1.0). Flux owns/prunes these after bootstrap.
 resources:
-  - https://github.com/kubernetes-sigs/gateway-api/config/crd/standard?ref=v1.1.0
+  - https://github.com/kubernetes-sigs/gateway-api/tree/v1.6.1/config/crd
