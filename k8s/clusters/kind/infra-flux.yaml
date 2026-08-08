@@ -1,0 +1,19 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-flux
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./k8s/infra/controllers/flux
+  # prune is intentionally false: this Kustomization manages the FluxInstance
+  # CR that flux-operator uses to run Flux itself (incl. kustomize-controller,
+  # which reconciles this very object). If fluxinstance.yaml were ever removed
+  # from git, pruning would delete the FluxInstance out from under the
+  # controller reconciling it. Bootstrap applies it once out-of-band
+  # (kubectl apply -k k8s/infra/controllers/flux); this Kustomization only
+  # keeps it in sync with git afterwards.
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

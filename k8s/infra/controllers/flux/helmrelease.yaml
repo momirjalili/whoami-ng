@@ -1,0 +1,24 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flux-operator
+  namespace: flux-system
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: flux-operator
+      sourceRef:
+        kind: HelmRepository
+        name: flux-operator
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+    # flux-operator ships its own CRDs (FluxInstance, ResourceSet, ...) and
+    # updates them across versions; keep them in sync on install/upgrade.
+    crds: CreateReplace
+  upgrade:
+    remediation:
+      retries: 3
+    crds: CreateReplace

@@ -1,0 +1,10 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: default-pool
+spec:
+  # CIDR is injected per-cluster via Flux postBuild substitution.
+  # kind:    a slice of the kind docker subnet (e.g. 172.18.255.192/26)
+  # kubeadm: a free range on your LAN (e.g. 192.168.10.240/28)
+  blocks:
+    - cidr: "${CILIUM_LB_CIDR}"

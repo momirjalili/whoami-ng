@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: default-l2
+spec:
+  loadBalancerIPs: true
+  # Interface regex is injected per-cluster via Flux postBuild substitution.
+  interfaces:
+    - "${CILIUM_L2_INTERFACE}"
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/os: linux

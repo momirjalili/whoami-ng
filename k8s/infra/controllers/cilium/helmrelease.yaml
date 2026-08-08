@@ -1,0 +1,43 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: cilium
+      version: "1.16.5"
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  # These values MUST match the `helm upgrade --install` in
+  # k8s/scripts/lib-flux-cilium.sh so Flux adopts the bootstrap release with
+  # zero drift. ${CILIUM_K8S_SERVICE_HOST} is injected per-cluster via Flux
+  # postBuild substitution (see the infra-cilium Kustomization).
+  values:
+    kubeProxyReplacement: true
+    k8sServiceHost: "${CILIUM_K8S_SERVICE_HOST}"
+    k8sServicePort: 6443
+    operator:
+      replicas: 1
+    gatewayAPI:
+      enabled: true
+    l2announcements:
+      enabled: true
+    externalIPs:
+      enabled: true
+    # L2 announcements are chatty against the API server; bump the client limits.
+    k8sClientRateLimit:
+      qps: 50
+      burst: 100
+    hubble:
+      enabled: false
